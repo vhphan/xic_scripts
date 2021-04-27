@@ -35,11 +35,10 @@ def get_cols_needed_cic():
     sublist(list(cic.columns), list(uic.columns))
 
     set_difference = set(cic.columns) - set(uic.columns)
-    cols_needed_cic = list(set_difference)
-    return cols_needed_cic
+    return list(set_difference)
 
 
-def process_pm():
+def get_pm_merged():
     df_list_uic = []
     df_list_cic = []
     cols_needed_cic = get_cols_needed_cic()
@@ -56,13 +55,18 @@ def process_pm():
     print(df_uic.shape, df_cic.shape)
     df_final = pd.concat([df_cic, df_uic], axis=1)
     df_final.reset_index(inplace=True)
+    return df_final
+
+
+def process_pm():
+    df_final = get_pm_merged()
 
     for chunk in tqdm(np.array_split(df_final, 10_000)):
         i = chunk[['EUtranCellFDD']].head(1).index.values[0]
         try:
             chunk.to_sql('pm_merged', engine_mysql, index=False, if_exists='append')
             if i % 100_000 == 0:
-                logger.info( f'{i} completed')
+                logger.info(f'{i} completed')
         except OperationalError:
             logger.error(f'{i}')
             logger.error(OperationalError.__repr__(), f'at {i}')
